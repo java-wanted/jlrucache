@@ -30,6 +30,66 @@ Output
 [null, null, null, 1, null, -1, null, -1, 3, 4]
 ```
 
+## SOLUTION
+
+  The following design is considered:
+
+  - A `frames` object provides the storage for values cached.
+
+  - An `hmap` object maps keys into the corresponding frames.
+
+  - An `lrul` object keeps the history of access to elements of `hmap`.
+
+  The following pseudo code describes the interaction of this objects:
+
+```c
+; A hash map - O(1) access time in average.
+; NOTE: It will be exactly O(1) for UINT32_MAX buckets.
+hmap
+    backets []
+        hmap_item: list of (key, frame_idx, lrul_item)
+    [key]
+        <- hmap_item for the key or None
+
+; A list of least recently used hmap items
+lrul
+    lrul_item: list of hmap items
+
+; An array of values of the given capacity
+frames
+    value: i32 []
+    len: u32
+    reserve()
+        <- len++
+
+; Add a value for a key.
+put(key, value)
+    hmap_item = hmap[key]
+    if hmap_item
+        lrul_item = lrul.rm(hmap_item.lrul_item)
+    else
+        if len(frames) < capacity(frames)
+            hmap_item = (reserve(frames))
+            lrul_item = (hmap_item)
+        else
+            lrul_item = lrul.rm_tail()
+            hmap_item = lrul_item.hmap_item
+            hmap.rm(hmap_item)
+        hmap_item.key = key
+        hmap.add(hmap_item)
+    lrul.add_head(lru_item)
+    frames[hmap_item.frame_idx] = value
+
+; Get value for a key.
+get(key)
+    hmap_item = hmap[key]
+    if not hmap_item
+        <- -1
+    lrul_item = lrul.rm(hmap_item.lrul_item)
+    lrul.add_head(lrul_item)
+    <- frames[hmap_item.frame_idx]
+```
+
 ## AUTHOR
 
   Boris Stankevich <microsoft-wanted@yandex.ru>.
